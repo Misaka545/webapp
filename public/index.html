@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopee Retro Manager</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Retro Background Shapes -->
+    <div class="retro-bg">
+        <div class="stripe-tl s-1"></div>
+        <div class="stripe-tl s-2"></div>
+        <div class="stripe-tl s-3"></div>
+        <div class="stripe-tl s-4"></div>
+        <div class="stripe-tl s-5"></div>
+        
+        <div class="stripe-br" style="background: var(--retro-red); bottom: 10px;"></div>
+        <div class="stripe-br" style="background: var(--retro-orange); bottom: 30px;"></div>
+        <div class="stripe-br" style="background: var(--retro-yellow); bottom: 50px;"></div>
+        <div class="stripe-br" style="background: var(--retro-green); bottom: 70px;"></div>
+        <div class="stripe-br" style="background: var(--retro-blue); bottom: 90px;"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Shopee Manager</h1>
+            <!-- <p style="color: var(--text-muted); letter-spacing: 2px; font-size: 0.9rem;">DATABASE SYSTEM</p> -->
+        </header>
+
+        <!-- Notification -->
+        <div id="notification"></div>
+
+        <!-- Navigation -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('search')">
+                <i class="fas fa-search"></i> Tra cứu 
+            </button>
+            <button class="tab-btn" onclick="switchTab('manager')">
+                <i class="fas fa-plus-circle"></i> Quản lý sản phẩm 
+            </button>
+            <button class="tab-btn" onclick="switchTab('stats')">
+                <i class="fas fa-chart-bar"></i> Thống kê Shop 
+            </button>
+        </div>
+
+        <div class="content-card">
+            
+            <!-- TAB 1: TRA CỨU & DANH SÁCH (3.2) -->
+            <div id="tab-search" class="tab-content active">
+                <h2 style="color: var(--retro-green); margin-bottom: 20px;">
+                    <i class="fas fa-search"></i> Tìm kiếm Sản phẩm 
+                </h2>
+                
+                <div class="grid-2" style="grid-template-columns: 2fr 1fr 1fr; margin-bottom: 20px;">
+                    <div>
+                        <label>Từ khóa</label>
+                        <input type="text" id="searchKeyword" placeholder="Tên hoặc danh mục..." oninput="renderProductTable()">
+                    </div>
+                    <div>
+                        <label>Giá thấp nhất</label>
+                        <input type="number" id="searchMin" value="0" oninput="renderProductTable()">
+                    </div>
+                    <div>
+                        <label>Giá cao nhất</label>
+                        <input type="number" id="searchMax" value="100000000" oninput="renderProductTable()">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên sản phẩm</th>
+                                <th>Shop</th>
+                                <th>Giá (VND)</th>
+                                <th style="text-align: right;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            <!-- JS sẽ render dữ liệu vào đây -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: QUẢN LÝ SẢN PHẨM (3.1) -->
+            <div id="tab-manager" class="tab-content">
+                <h2 id="formTitle" style="color: var(--retro-yellow); margin-bottom: 20px;">
+                    <i class="fas fa-plus"></i> Thêm Sản Phẩm Mới (INSERT_PRODUCT)
+                </h2>
+
+                <form id="productForm">
+                    <input type="hidden" id="editId"> <!-- Lưu ID khi sửa -->
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Chọn Shop</label>
+                            <select id="inputShop">
+                                <!-- JS sẽ render shop options từ DB -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Giá cơ bản (VND)</label>
+                            <input type="number" id="inputPrice" placeholder="VD: 100000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tên sản phẩm</label>
+                        <input type="text" id="inputName" placeholder="VD: Bàn phím cơ...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Mô tả sản phẩm</label>
+                        <textarea id="inputDesc" rows="4" placeholder="Mô tả chi tiết..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn-primary" id="btnSave">THÊM SẢN PHẨM</button>
+                        <button type="button" class="btn-secondary hidden" id="btnCancel" onclick="resetForm()">HỦY</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAB 3: THỐNG KÊ (3.3) -->
+            <div id="tab-stats" class="tab-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="color: var(--retro-orange);">
+                        <i class="fas fa-chart-pie"></i> Thống kê Shop (sp_getShopProductStatistics)
+                    </h2>
+                    <select id="statsShopSelect" style="width: 200px;" onchange="renderStats()">
+                        <!-- JS sẽ render shop options từ DB -->
+                    </select>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card green">
+                        <div class="stat-label">Tổng Doanh Thu</div>
+                        <div class="stat-val" style="color: var(--retro-green);" id="statRevenue">0 VND</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-label">Tổng sản phẩm bán ra</div>
+                        <div class="stat-val" style="color: var(--retro-blue);" id="statUnits">0 Units</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tên sản phẩm</th>
+                                <th style="text-align: right;">Đã bán (Qty)</th>
+                                <th style="text-align: right;">Doanh thu (VND)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody">
+                            <!-- JS sẽ render dữ liệu vào đây -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
