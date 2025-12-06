@@ -1,4 +1,4 @@
-USE Shopeedb;
+USE shopee;
 
 DELIMITER $$
 
@@ -408,3 +408,449 @@ SELECT
     fn_classifyBuyerRank(userID) AS Rank_Calculated
 FROM USERS 
 WHERE userID IN (11, 12, 13);
+
+
+
+-- ==============================================================-- PROCEDURE: INSERT_PRODUCT
+-- Mục đích: Thêm sản phẩm mới vào cửa hàng với các kiểm tra hợp lệ.
+--Sử dụng bảng PRODUCT
+-- Câu lệnh:
+CREATE PROCEDURE INSERT_PRODUCT(
+    IN P_SHOPID INT,
+    IN P_NAME VARCHAR(150),
+    IN P_DESCRIPTION TEXT,
+    IN P_BASE_PRICE INT,
+    IN P_CATEGORYID INT      
+)
+BEGIN
+    DECLARE shop_exists INT DEFAULT 0;
+    DECLARE shop_active INT DEFAULT 0;
+    DECLARE category_exists INT DEFAULT 0;
+    DECLARE new_product_id INT;
+
+    -- KIỂM TRA SHOP CÓ TỒN TẠI
+    SELECT COUNT(*) INTO shop_exists FROM SHOP WHERE shopID = P_SHOPID;
+    IF shop_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'SHOP KHÔNG TỒN TẠI!';
+    END IF;
+
+    -- KIỂM TRA SHOP ACTIVE
+    SELECT COUNT(*) INTO shop_active 
+    FROM SHOP WHERE shopID = P_SHOPID AND shop_Status = 'ACTIVE';
+    IF shop_active = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'SHOP ĐÃ NGỪNG HOẠT ĐỘNG!';
+    END IF;
+
+    -- KIỂM TRA CATEGORY
+    SELECT COUNT(*) INTO category_exists 
+    FROM CATEGORY 
+    WHERE categoryID = P_CATEGORYID;
+
+    IF category_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'CATEGORY KHÔNG TỒN TẠI!';
+    END IF;
+
+    -- KIỂM TRA TÊN
+    IF P_NAME IS NULL OR TRIM(P_NAME) = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'TÊN SẢN PHẨM KHÔNG ĐƯỢC ĐỂ TRỐNG!';
+    END IF;
+
+    -- KIỂM TRA GIÁ > 0
+    IF P_BASE_PRICE <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'GIÁ SẢN PHẨM PHẢI LỚN HƠN 0!';
+    END IF;
+
+    -- THÊM PRODUCT
+    INSERT INTO PRODUCT(shopID, name, description, base_Price)
+    VALUES(P_SHOPID, P_NAME, P_DESCRIPTION, P_BASE_PRICE);
+
+    SET new_product_id = LAST_INSERT_ID();
+
+    -- THÊM QUAN HỆ CATEGORY
+    INSERT INTO BELONGS_TO_CATEGORY(productID, categoryID)
+    VALUES (new_product_id, P_CATEGORYID);
+
+    SELECT 'THÀNH CÔNG: SẢN PHẨM "', P_NAME, '" ĐÃ ĐƯỢC THÊM VÀ GÁN CATEGORY!' AS MESSAGE;
+
+END;
+-- Testcase:
+-- Test 1: Thêm sản phẩm thành công
+CALL INSERT_PRODUCT(1, 'Bàn phím cơ RGB', 'Bàn phím cơ full RGB switch blue', 650000, 1);
+
+-- Test 2: Thêm sản phẩm thành công khác
+CALL INSERT_PRODUCT(2, 'Nồi chiên không dầu 7L', 'Nồi chiên không dầu dung tích lớn', 1500000, 1);
+
+-- Test 3: Lỗi - Shop không tồn tại
+CALL INSERT_PRODUCT(999, 'Sản phẩm test', 'Mô tả', 100000, 1);
+ 
+
+-- Test 4: Lỗi - Shop không active
+INSERT INTO SHOP (sellerID, shopName, description, shopType, date_Open, shop_Status) 
+VALUES (6, 'Shop Inactive', 'Shop ngừng hoạt động', 'Other','2019-3-4' , 'INACTIVE');
+
+CALL INSERT_PRODUCT(6, 'Sản phẩm test', 'Mô tả', 100000);
+ 
+-- Test 5: Lỗi - Tên sản phẩm rỗng
+CALL INSERT_PRODUCT(1, '', 'Mô tả', 100000);
+ 
+
+-- Test 6: Lỗi - Giá sản phẩm < 0
+CALL INSERT_PRODUCT(1, 'Sản phẩm giá âm', 'Mô tả', -50000);
+ 
+
+-- Test 7: Lỗi - Giá sản phẩm = 0
+CALL INSERT_PRODUCT(1, 'Sản phẩm giá 0', 'Mô tả', 0);
+
+--2.1.2 Update
+-- Bảng PRODUCT
+-- Câu lệnh: 
+CREATE PROCEDURE UPDATE_PRODUCT(
+    IN P_PRODUCTID INT,
+    IN P_NAME VARCHAR(150),
+    IN P_DESCRIPTION TEXT,
+    IN P_BASE_PRICE INT,
+    IN P_CATEGORY_ID INT      
+)
+BEGIN
+    DECLARE product_exists INT DEFAULT 0;
+    DECLARE category_exists INT DEFAULT 0;
+
+    -- KIỂM TRA SẢN PHẨM
+    SELECT COUNT(*) INTO product_exists 
+    FROM PRODUCT 
+    WHERE productID = P_PRODUCTID;
+
+    IF product_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'SẢN PHẨM KHÔNG TỒN TẠI!';
+    END IF;
+
+    -- KIỂM TRA CATEGORY
+    SELECT COUNT(*) INTO category_exists 
+    FROM CATEGORY 
+    WHERE categoryID = P_CATEGORY_ID;
+
+    IF category_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'CATEGORY KHÔNG TỒN TẠI!';
+    END IF;
+
+    -- KIỂM TRA TÊN
+    IF P_NAME IS NULL OR TRIM(P_NAME) = '' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'TÊN SẢN PHẨM KHÔNG ĐƯỢC ĐỂ TRỐNG!';
+    END IF;
+
+    -- KIỂM TRA GIÁ
+    IF P_BASE_PRICE <= 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'GIÁ SẢN PHẨM PHẢI LỚN HƠN 0!';
+    END IF;
+
+    -- UPDATE PRODUCT
+    UPDATE PRODUCT 
+    SET name = P_NAME,
+        description = P_DESCRIPTION,
+        base_Price = P_BASE_PRICE
+    WHERE productID = P_PRODUCTID;
+
+    -- XÓA CATEGORY CŨ (nếu có)
+    DELETE FROM BELONGS_TO_CATEGORY 
+    WHERE productID = P_PRODUCTID;
+
+    -- THÊM CATEGORY MỚI
+    INSERT INTO BELONGS_TO_CATEGORY(productID, categoryID)
+    VALUES(P_PRODUCTID, P_CATEGORY_ID);
+
+    SELECT 'CẬP NHẬT THÀNH CÔNG: SẢN PHẨM #', P_PRODUCTID AS MESSAGE;
+END;
+
+-- Testcase:
+-- Test 8: Cập nhật sản phẩm thành công
+CALL UPDATE_PRODUCT(1, 'Tai nghe Bluetooth cao cấp', 'Chất lượng âm thanh tuyệt vời', 350000, 1);
+-- Test 9: Lỗi - Sản phẩm không tồn tại
+CALL UPDATE_PRODUCT(999, 'Tên mới', 'Mô tả mới', 200000, 1);
+ 
+-- Test 10: Lỗi - Tên sản phẩm rỗng
+CALL UPDATE_PRODUCT(6, '', 'Mô tả mới', 200000, 1);
+ 
+
+-- Test 11: Lỗi - Giá sản phẩm <= 0
+CALL UPDATE_PRODUCT(6, 'Tên mới', 'Mô tả mới', -100000, 1);
+--2.1.3. Delete 
+-- Sản phẩm được xóa khi :
+-- Sản phẩm thông tin không đúng, vi phạm quy định của sàn thương mại điện tử
+-- Sản phẩm test trong quá trình phát triển
+-- Sản phẩm chưa có khách hàng đạt mua
+-- Sản phẩm không được xóa khi: Sản phẩm đã có đơn hàng
+-- Mục đích, lý do cần xóa sản phẩm:
+-- Tránh tồn tại các sản phẩm sai phạm, sai thông tin ảnh hưởng đến uy tín sàn thương mại điện tử
+-- Dọn dẹp Database, loại bỏ các dữ liệu test
+-- Giảm thiểu các dữ liệu không cần thiết giúp tối ưu hiệu suất
+-- Bảng: PRODUCT
+-- Câu lệnh:
+CREATE PROCEDURE DELETE_PRODUCT(
+    IN P_PRODUCTID INT
+)
+BEGIN
+    DECLARE product_exists INT DEFAULT 0;
+    DECLARE has_orders INT DEFAULT 0;
+    DECLARE product_name VARCHAR(150);
+
+    -- kiểm tra sản phẩm có tồn tại
+    SELECT COUNT(*) INTO product_exists 
+    FROM PRODUCT 
+    WHERE productID = P_PRODUCTID;
+
+    IF product_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'SẢN PHẨM KHÔNG TỒN TẠI!';
+    END IF;
+
+    -- LẤY TÊN SẢN PHẨM
+    SELECT name INTO product_name
+    FROM PRODUCT
+    WHERE productID = P_PRODUCTID
+    LIMIT 1;
+
+
+    -- kiểm tra sản phẩm có trong đơn hàng không
+    SELECT COUNT(*) INTO has_orders
+    FROM ORDER_ITEM 
+    WHERE productID = P_PRODUCTID;
+    
+    IF has_orders > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'KHÔNG THỂ XÓA SẢN PHẨM ĐÃ TỪNG ĐƯỢC ĐẶT HÀNG!';
+    END IF;
+
+    -- thực hiện xóa
+    DELETE FROM PRODUCT WHERE productID = P_PRODUCTID;
+
+    SELECT CONCAT('THÀNH CÔNG: SẢN PHẨM "', product_name, '" ĐÃ ĐƯỢC XÓA!') AS MESSAGE;
+
+END;
+-- TestCase:
+-- Test 12: Xóa sản phẩm không có đơn hàng (thành công)
+CALL INSERT_PRODUCT(1, 'Sản phẩm test xóa', 'Sản phẩm để test xóa', 100000);
+CALL DELETE_PRODUCT(107);
+
+-- Test 13: Lỗi - Xóa sản phẩm có đơn hàng
+CALL DELETE_PRODUCT(6);  -- Sản phẩm có trong ORDER_ITEM
+ 
+-- Test 14: Lỗi - Sản phẩm không tồn tại
+CALL DELETE_PRODUCT(999);
+
+--2.2 Trigger
+--2.2.1. Trigger kiểm tra ràng buộc nghiệp vụ
+-- Ràng buộc: Chỉ người mua đã hoàn tất đơn hàng mới có thể đánh giá sản phẩm
+-- Các thao tác DML có thể vi phạm ràng buộc: 
+-- Thêm đánh giá mới: INSERT INTO REVIEW
+-- Câu lệnh:
+CREATE TRIGGER trg_before_insert_review
+BEFORE INSERT ON REVIEW
+FOR EACH ROW
+BEGIN
+    DECLARE order_status VARCHAR(20);
+    DECLARE order_exists INT DEFAULT 0;
+    DECLARE product_exists INT DEFAULT 0;
+    DECLARE buyer_exists INT DEFAULT 0;
+    DECLARE review_exists INT DEFAULT 0;
+    
+    -- kiểm tra sản phẩm có tồn tại không
+    SELECT COUNT(*) INTO product_exists
+    FROM PRODUCT 
+    WHERE productID = NEW.productID;
+    IF product_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'SAN PHAM KHONG TON TAI!';
+    END IF;
+    
+    -- kiểm tra buyer có tồn tại không
+    SELECT COUNT(*) INTO buyer_exists
+    FROM BUYER 
+    WHERE userID = NEW.buyerID;
+    IF buyer_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'BUYER KHONG TON TAI!';
+    END IF;
+    
+    -- kiểm tra buyer đã review sản phẩm này chưa
+    SELECT COUNT(*) INTO review_exists
+    FROM REVIEW 
+    WHERE buyerID = NEW.buyerID AND productID = NEW.productID;
+    IF review_exists > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'BAN CHI DUOC DANH GIA SAN PHAM NAY 1 LAN!';
+    END IF;
+    
+    -- kiểm tra đơn hàng có tồn tại và thuộc về người mua này không
+    SELECT COUNT(*) INTO order_exists
+    FROM ORDER_ITEM oi
+    JOIN ORDERS o ON oi.orderID = o.orderID
+    WHERE oi.productID = NEW.productID 
+      AND o.buyerID = NEW.buyerID;
+    
+    -- Nếu có đơn hàng, lấy status của nó
+    IF order_exists > 0 THEN
+        SELECT oi.status INTO order_status
+        FROM ORDER_ITEM oi
+        JOIN ORDERS o ON oi.orderID = o.orderID
+        WHERE oi.productID = NEW.productID 
+          AND o.buyerID = NEW.buyerID
+    ELSE
+        SET order_status = NULL;
+    END IF;
+    IF order_exists = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'KHONG TIM THAY DON HANG TUONG UNG VOI SAN PHAM NAY!';
+    END IF;
+    
+    -- Kiểm tra đơn hàng đã hoàn thành chưa
+    IF order_status != 'COMPLETED' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'CHI DUOC DANH GIA SAN PHAM SAU KHI DON HANG DA HOAN THANH!';
+    END IF;
+END;
+ 
+-- Test Case:
+-- Test case 1: Thêm đánh giá hợp lệ
+INSERT INTO REVIEW (buyerID, productID, rating, comment) 
+VALUES (11, 6, 5, 'Sản phẩm tuyệt vời!');
+
+-- Test case 2: Sản phẩm không tồn tại
+INSERT INTO REVIEW (buyerID, productID, rating, comment) 
+VALUES (11, 99, 5, 'Sản phẩm tuyệt vời!');
+ 
+
+-- Test case 3: Buyer không tồn tại
+INSERT INTO REVIEW (buyerID, productID, rating, comment) 
+VALUES (99, 6, 5, 'Sản phẩm tuyệt vời!');
+ 
+
+-- Test case 4: Chỉ được đánh giá 1 lần
+INSERT INTO REVIEW (buyerID, productID, rating, comment) 
+VALUES (11, 6, 5, 'Sản phẩm tuyệt vời!');
+ 
+
+-- Test case 5: Không tìm thấy đơn hàng
+INSERT INTO REVIEW (buyerID, productID, rating, comment) 
+VALUES (11, 15, 5, 'Sản phẩm tuyệt vời!');
+
+-- Test case 6: Chỉ đánh giá khi đã hoàn thành đơn hàng
+INSERT INTO REVIEW (buyerID, productID, rating, comment) 
+VALUES (12, 7, 5, 'Sản phẩm tuyệt vời!');
+
+--2.2.2 Trigger cho thuộc tính dẫn xuất
+-- Thuộc tính: giá trị total_Amount trong ORDERS
+-- Cách tính: total_Amount = quantity * unit_Price
+-- Các theo tác DML có thể thay đổi giá trị thuộc tính: 
+-- Thêm sản phẩm vào đơn hàng: INSERT INTO ORDER_ITEM 
+-- Cập nhật số lượng hoặc giá: UPDATE ORDER_ITEM 
+-- Câu lệnh:
+-- Trigger 1: Sau khi thêm ORDER_ITEM mới
+CREATE TRIGGER trg_update_order_total_after_insert
+AFTER INSERT ON ORDER_ITEM
+FOR EACH ROW
+BEGIN
+    DECLARE order_total INT;
+    
+    -- Tính tổng tiền cho order
+    SELECT SUM(quantity * unit_Price) 
+    INTO order_total
+    FROM ORDER_ITEM
+    WHERE orderID = NEW.orderID;
+    
+    -- Cập nhật tổng tiền vào bảng ORDERS
+    UPDATE ORDERS 
+    SET total_Amount = IFNULL(order_total, 0)
+    WHERE orderID = NEW.orderID;
+END;
+
+-- Trigger 2: Sau khi cập nhật ORDER_ITEM
+CREATE TRIGGER trg_update_order_total_after_update
+AFTER UPDATE ON ORDER_ITEM
+FOR EACH ROW
+BEGIN
+    DECLARE order_total INT;
+    
+    -- Tính tổng tiền cho order
+	-- Có thể có nhiều mặt hàng trong 1 đơn
+    SELECT SUM(quantity * unit_Price) 
+    INTO order_total
+    FROM ORDER_ITEM
+    WHERE orderID = NEW.orderID;
+    
+    -- Cập nhật tổng tiền vào bảng ORDERS
+    UPDATE ORDERS 
+    SET total_Amount = IFNULL(order_total, 0)
+    WHERE orderID = NEW.orderID;
+END;
+-- Test Case:
+-- Test INSERT INTO ORDER_ITEM  
+INSERT INTO ORDERS (buyerID, addressID, total_Amount, order_Date) VALUES
+(15, 5,  0,  '2025-11-15 08:00:00');
+ 
+INSERT INTO ORDER_ITEM VALUES
+(13, 1, 20, 1, 'PENDING', 1, 100000, '2025-11-20', '2025-11-20', 'PAID');
+ 
+--> Bảng ORDER đã cập nhật giá trị total_amount : 100000
+ 
+-- Test UPDATE ORDER_ITEM 
+-- Upadate unit_price
+UPDATE ORDER_ITEM 
+SET unit_Price = 200000 
+WHERE orderID = 13 AND productID = 20 AND optionID = 1;
+--> Bảng ORDER đã cập nhật giá trị total_amount : 200000
+  
+-- Update quantity
+UPDATE ORDER_ITEM 
+SET quantity = 0
+WHERE orderID = 13 AND productID = 20 AND optionID = 1;
+--> Bảng ORDER đã cập nhật giá trị total_amount : 0
+
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS sp_updateOrderStatus $$
+
+CREATE PROCEDURE sp_updateOrderStatus(
+    IN p_shopID INT,
+    IN p_orderID INT,
+    IN p_productID INT,
+    IN p_newStatus VARCHAR(20)
+)
+BEGIN
+    DECLARE v_count INT;
+
+    -- 1. Kiểm tra xem món hàng này có thuộc về Shop này không (Bảo mật)
+    SELECT COUNT(*) INTO v_count
+    FROM ORDER_ITEM oi
+    JOIN PRODUCT p ON oi.productID = p.productID
+    WHERE oi.orderID = p_orderID 
+      AND oi.productID = p_productID 
+      AND p.shopID = p_shopID;
+
+    IF v_count = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Không tìm thấy đơn hàng hoặc sản phẩm không thuộc Shop của bạn!';
+    END IF;
+
+    -- 2. Cập nhật trạng thái
+    UPDATE ORDER_ITEM
+    SET status = p_newStatus,
+        -- Nếu giao thành công thì cập nhật ngày giao thực tế
+        delivered_date = IF(p_newStatus = 'DELIVERED', NOW(), NULL)
+    WHERE orderID = p_orderID AND productID = p_productID;
+    
+    -- Ghi chú: Hàm fn_calculateShopNetRevenue chỉ tính các đơn có status = 'DELIVERED'.
+    -- Do đó, khi status chuyển sang DELIVERED, doanh thu sẽ tự động được tính.
+
+    SELECT 'Cập nhật trạng thái thành công!' AS message;
+END $$
+
+DELIMITER ;

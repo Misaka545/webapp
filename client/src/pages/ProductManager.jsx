@@ -6,8 +6,6 @@ const ProductManager = ({ shops, categories, editData, onCancel, onNotify, onSuc
 
     useEffect(() => {
         if(editData) {
-            // FIX: Dữ liệu từ Search API không có ID, chỉ có tên (ShopName, Category).
-            // Ta cần tìm ID tương ứng trong danh sách shops/categories để điền vào form.
             const foundShop = shops.find(s => s.shopName === editData.ShopName);
             const foundCat = categories.find(c => c.categoryName === editData.Category);
 
@@ -15,8 +13,8 @@ const ProductManager = ({ shops, categories, editData, onCancel, onNotify, onSuc
                 id: editData.productID, 
                 shopID: foundShop ? foundShop.shopID : '', 
                 categoryID: foundCat ? foundCat.categoryID : '', 
-                name: editData.ProductName, // Sử dụng alias đúng
-                price: editData.Price,      // Sử dụng alias đúng
+                name: editData.ProductName, 
+                price: editData.Price,      
                 desc: editData.description 
             });
         }
@@ -27,7 +25,6 @@ const ProductManager = ({ shops, categories, editData, onCancel, onNotify, onSuc
 
     const submit = async (e) => {
         e.preventDefault();
-        // Gửi basePrice thay vì price để khớp server
         const res = await saveProduct({ ...form, basePrice: form.price, description: form.desc });
         if(res.message) { onNotify(res.message); onSuccess(); }
         else onNotify(res.error, 'error');
