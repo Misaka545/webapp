@@ -1,3 +1,6 @@
+drop database if exists Shopeedb;
+create database Shopeedb;
+use Shopeedb;
 -- USERS 
 CREATE TABLE USERS (
     userID INT AUTO_INCREMENT PRIMARY KEY,
@@ -155,29 +158,15 @@ CREATE TABLE OWN_VOUCHER (
 
 -- SHOP_REVIEW
 CREATE TABLE SHOP_REVIEW (
-    reviewID INT AUTO_INCREMENT PRIMARY KEY,
     buyerID INT NOT NULL,
     shopID INT NOT NULL,
     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     comment TEXT NOT NULL,
     date_Posted DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (buyerID, shopID),
     FOREIGN KEY (buyerID) REFERENCES BUYER(userID)
         ON UPDATE CASCADE ,
     FOREIGN KEY (shopID) REFERENCES SHOP(shopID)
-        ON UPDATE CASCADE 
-);
-
--- REVIEW
-CREATE TABLE REVIEW (
-    reviewID INT AUTO_INCREMENT PRIMARY KEY,
-    buyerID INT NOT NULL,
-    productID INT NOT NULL,
-    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    comment TEXT NOT NULL,
-    date_Posted DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (buyerID) REFERENCES BUYER(userID)
-        ON UPDATE CASCADE ,
-    FOREIGN KEY (productID) REFERENCES PRODUCT(productID)
         ON UPDATE CASCADE 
 );
 
@@ -192,6 +181,23 @@ CREATE TABLE ORDERS (
         ON UPDATE CASCADE,
     FOREIGN KEY (addressID) REFERENCES BUYER_ADDRESS(addressID)
         ON UPDATE CASCADE
+);
+
+-- REVIEW
+CREATE TABLE REVIEW (
+    buyerID INT NOT NULL,
+    orderID INT NOT NULL,
+    productID INT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT NOT NULL,
+    date_Posted DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (buyerID, orderID),
+    FOREIGN KEY (orderID) REFERENCES ORDERS(orderID)
+        ON UPDATE CASCADE ,
+    FOREIGN KEY (buyerID) REFERENCES BUYER(userID)
+        ON UPDATE CASCADE ,
+    FOREIGN KEY (productID) REFERENCES PRODUCT(productID)
+        ON UPDATE CASCADE 
 );
 
 -- PAYMENT
@@ -214,6 +220,7 @@ CREATE TABLE SHIPPING_CARRIER (
 
 -- ORDER_ITEM
 CREATE TABLE ORDER_ITEM (
+    orderItemID INT AUTO_INCREMENT,
     orderID INT NOT NULL,
     optionID INT NOT NULL,
     productID INT NOT NULL,
@@ -224,7 +231,7 @@ CREATE TABLE ORDER_ITEM (
     delivered_date DATE,
     expected_delivered_date DATE,
     statusPaid ENUM('PAID', 'UNPAID') NOT NULL DEFAULT 'UNPAID',
-    PRIMARY KEY(orderID, productID, optionID),
+    PRIMARY KEY(orderItemID),
     FOREIGN KEY (orderID) REFERENCES ORDERS(orderID)
         ON UPDATE CASCADE ON DELETE CASCADE,
     FOREIGN KEY (carrierID) REFERENCES SHIPPING_CARRIER(carrierID)
@@ -236,13 +243,12 @@ CREATE TABLE ORDER_ITEM (
 -- ORDER_VOUCHER
 CREATE TABLE ORDER_VOUCHER (
     orderID INT,
-    buyerID INT,
     voucherID INT,
     date_Applied DATE,
-    PRIMARY KEY (orderID),
+    PRIMARY KEY (orderID, voucherID),
     FOREIGN KEY (orderID) REFERENCES ORDERS(orderID)
         ON UPDATE CASCADE ON DELETE CASCADE,
-    FOREIGN KEY (buyerID, voucherID) REFERENCES OWN_VOUCHER(buyerID, voucherID)
+    FOREIGN KEY (voucherID) REFERENCES VOUCHER(voucherID)
         ON UPDATE CASCADE ON DELETE CASCADE
 );
 
@@ -479,14 +485,12 @@ INSERT INTO USERS (username, fullname, password, phone, email, status) VALUES
 ('admin3', 'ADMIN3', 'Pass12345', '0901000003', 'admin3@gmail.com', 'ACTIVE'),
 ('admin4', 'ADMIN4', 'Pass12345', '0901000004', 'admin4@gmail.com', 'ACTIVE'),
 ('admin5', 'ADMIN5', 'Pass12345', '0901000005', 'admin5@gmail.com', 'ACTIVE'),
-
 -- Sellers
 ('seller1', 'SELLER1', 'Pass12345', '0902000001', 'seller1@gmail.com', 'ACTIVE'),
 ('seller2', 'SELLER2', 'Pass12345', '0902000002', 'seller2@gmail.com', 'ACTIVE'),
 ('seller3', 'SELLER3', 'Pass12345', '0902000003', 'seller3@gmail.com', 'ACTIVE'),
 ('seller4', 'SELLER4', 'Pass12345', '0902000004', 'seller4@gmail.com', 'ACTIVE'),
 ('seller5', 'SELLER5', 'Pass12345', '0902000005', 'seller5@gmail.com', 'ACTIVE'),
-
 -- Buyers
 ('buyer1', 'BUYER1', 'Pass12345', '0903000001', 'buyer1@gmail.com', 'ACTIVE'),
 ('buyer2', 'BUYER2', 'Pass12345', '0903000002', 'buyer2@gmail.com', 'ACTIVE'),
@@ -582,15 +586,12 @@ INSERT INTO IMAGE_URL (productID, optionID, imageURL) VALUES
 -- Product 1 (Tai nghe Bluetooth)
 (1, 1, 'https://example.com/images/product1_black_1.jpg'),
 (1, 2, 'https://example.com/images/product1_white_1.jpg'),
-
 -- Product 2 (Nồi chiên không dầu)
 (2, 1, 'https://example.com/images/product2_silver_1.jpg'),
 (2, 2, 'https://example.com/images/product2_black_1.jpg'),
-
 -- Product 3 (Áo thun nam)
 (3, 1, 'https://example.com/images/product3_m_blue_1.jpg'),
 (3, 2, 'https://example.com/images/product3_l_red_1.jpg'),
-
 -- Product 4 (Giày thể thao)
 (4, 1, 'https://example.com/images/product4_42_red_1.jpg'),
 (4, 2, 'https://example.com/images/product4_43_black_1.jpg');
@@ -624,14 +625,6 @@ INSERT INTO SHOP_REVIEW (buyerID, shopID, rating, comment) VALUES
 (14, 4, 4, 'Giao hàng nhanh'),
 (15, 5, 5, 'Sách chất lượng cao');
 
--- REVIEW
-INSERT INTO REVIEW (buyerID, productID, rating, comment) VALUES
-(11, 1, 5, 'Nghe rất hay'),
-(12, 2, 4, 'Dễ dùng'),
-(13, 3, 5, 'Áo thoải mái'),
-(14, 4, 4, 'Giày êm'),
-(15, 5, 5, 'Nội dung hữu ích');
-
 -- ORDERS
 INSERT INTO ORDERS (buyerID, addressID, total_Amount, order_Date) VALUES
 (11, 1,  550000,  '2025-11-15 08:00:00'),
@@ -639,6 +632,14 @@ INSERT INTO ORDERS (buyerID, addressID, total_Amount, order_Date) VALUES
 (13, 3,  320000,  '2025-11-17 10:15:00'),
 (14, 4,  1170000,  '2025-11-18 14:00:00'),
 (15, 5,  250000,  '2025-11-19 16:45:00');
+
+-- REVIEW
+INSERT INTO REVIEW (buyerID, orderID, productID, rating, comment) VALUES
+(11, 1, 1, 5, 'Nghe rất hay'),
+(12, 2, 2, 4, 'Dễ dùng'),
+(13, 3, 3, 5, 'Áo thoải mái'),
+(14, 4, 4, 4, 'Giày êm'),
+(15, 5, 5, 5, 'Nội dung hữu ích');
 
 -- PAYMENT
 INSERT INTO PAYMENT (orderID, method, trackingCode, statusPayment) VALUES
@@ -659,35 +660,35 @@ INSERT INTO SHIPPING_CARRIER (carrier_Name, contact_Info) VALUES
 -- ORDER_ITEM 
 
 -- ORDER 1
-INSERT INTO ORDER_ITEM VALUES
+INSERT INTO ORDER_ITEM (orderID, productID, quantity, optionID, status, carrierID, unit_Price, delivered_date, expected_delivered_date, statusPaid) VALUES
 (1, 1, 1, 1, 'DELIVERED', 1, 275000, '2025-11-20', '2025-11-20', 'PAID'),
 (1, 2, 1, 1, 'DELIVERED', 1, 275000, '2025-11-20', '2025-11-20', 'PAID');
 
 -- ORDER 2
-INSERT INTO ORDER_ITEM VALUES
+INSERT INTO ORDER_ITEM (orderID, productID, quantity, optionID, status, carrierID, unit_Price, delivered_date, expected_delivered_date, statusPaid) VALUES
 (2, 1, 2, 2, 'PENDING', 1, 1150000, NULL, '2025-11-23', 'PAID'),
 (2, 2, 2, 2, 'PENDING', 1, 1150000, NULL, '2025-11-23', 'PAID');
 
 -- ORDER 3
-INSERT INTO ORDER_ITEM VALUES
-(3, 1, 3, 3, 'PENDING', 1, 160000, NULL, '2025-11-24', 'UNPAID'),
-(3, 2, 3, 3, 'PENDING', 2, 160000, NULL, '2025-11-24', 'UNPAID');
+INSERT INTO ORDER_ITEM (orderID, productID, quantity, optionID, status, carrierID, unit_Price, delivered_date, expected_delivered_date, statusPaid) VALUES
+(3, 1, 3, 1, 'PENDING', 1, 160000, NULL, '2025-11-24', 'UNPAID'),
+(3, 2, 3, 1, 'PENDING', 2, 160000, NULL, '2025-11-24', 'UNPAID');
 
 -- ORDER 4
-INSERT INTO ORDER_ITEM VALUES
-(4, 1, 4, 4, 'DELIVERED', 1, 585000, '2025-11-25', '2025-11-26', 'PAID'),
-(4, 2, 4, 4, 'DELIVERED', 1, 585000, '2025-11-25', '2025-11-26', 'PAID');
+INSERT INTO ORDER_ITEM (orderID, productID, quantity, optionID, status, carrierID, unit_Price, delivered_date, expected_delivered_date, statusPaid) VALUES
+(4, 1, 4, 2, 'DELIVERED', 1, 585000, '2025-11-25', '2025-11-26', 'PAID'),
+(4, 2, 4, 2, 'DELIVERED', 1, 585000, '2025-11-25', '2025-11-26', 'PAID');
 
 -- ORDER 5
-INSERT INTO ORDER_ITEM VALUES
-(5, 1, 5, 5, 'PENDING', 1, 125000, NULL, '2025-11-27', 'UNPAID'),
-(5, 2, 5, 5, 'PENDING', 1, 125000, NULL, '2025-11-27', 'UNPAID');
+INSERT INTO ORDER_ITEM (orderID, productID, quantity, optionID, status, carrierID, unit_Price, delivered_date, expected_delivered_date, statusPaid) VALUES
+(5, 1, 5, 1, 'PENDING', 1, 125000, NULL, '2025-11-27', 'UNPAID'),
+(5, 2, 5, 1, 'PENDING', 1, 125000, NULL, '2025-11-27', 'UNPAID');
 
 -- ORDER_VOUCHER (Đầy đủ buyerID)
 
-INSERT INTO ORDER_VOUCHER (orderID, voucherID, buyerID, date_Applied) VALUES
-(1, 2, 11, '2025-09-01'),
-(2, 3, 12, '2025-09-05'),
-(3, 3, 13, '2025-09-07'),
-(4, 4, 14, '2025-09-09'),
-(5, 5, 15, '2025-09-10');
+INSERT INTO ORDER_VOUCHER (orderID, voucherID, date_Applied) VALUES
+(1, 2, '2025-09-01'),
+(2, 3, '2025-09-05'),
+(3, 3, '2025-09-07'),
+(4, 4, '2025-09-09'),
+(5, 5, '2025-09-10');

@@ -261,7 +261,7 @@ DELIMITER ;
 -- Test
 CALL sp_searchProducts('Electronics', 100000, 5000000);
 CALL sp_getShopProductStatistics(1, NULL);
-SELECT shopID, fn_calculateShopNetRevenue(shopID, 9, 2025) AS total_revenue
+SELECT shopID, fn_calculateShopNetRevenue(shopID, 11, 2025) AS total_revenue
 FROM SHOP;
 SELECT userID, fn_classifyBuyerRank(userID) AS buyer_rank
 FROM BUYER;
@@ -296,8 +296,8 @@ SET @orderID_Rev = LAST_INSERT_ID();
 INSERT INTO ORDER_ITEM (orderID, optionID, productID, carrierID, status, quantity, unit_Price, delivered_date) 
 VALUES (@orderID_Rev, 1, 100, 1, 'DELIVERED', 2, 20000000, '2025-12-05');
 
-INSERT INTO REVIEW (buyerID, productID, rating, comment, date_Posted) VALUES 
-(14, 100, 5, 'Excellent performance!', '2025-12-10');
+INSERT INTO REVIEW (buyerID, orderID, productID, rating, comment, date_Posted) VALUES 
+(14, @orderID_Rev, 100, 5, 'Excellent performance!', '2025-12-10');
 
 
 -- Add Product 101 that is NEVER sold to test 'sp_getShopProductStatistics'
@@ -325,8 +325,8 @@ SET @orderID_VIP = LAST_INSERT_ID();
 INSERT INTO ORDER_ITEM (orderID, optionID, productID, carrierID, status, quantity, unit_Price, delivered_date) 
 VALUES (@orderID_VIP, 1, 100, 1, 'DELIVERED', 1, 15000000, NOW());
 
-INSERT INTO REVIEW (buyerID, productID, rating, comment, date_Posted) VALUES 
-(11, 100, 4, 'Good value for money.', NOW());
+INSERT INTO REVIEW (buyerID, orderID, productID, rating, comment, date_Posted) VALUES 
+(11, @orderID_VIP, 100, 4, 'Good value for money.', NOW());
 
 -- TEST QUERY FOR SCENARIO 2:
 SELECT fn_classifyBuyerRank(11); 
@@ -348,8 +348,8 @@ SET @orderID_Inactive = LAST_INSERT_ID();
 INSERT INTO ORDER_ITEM (orderID, optionID, productID, carrierID, status, quantity, unit_Price, delivered_date) 
 VALUES (@orderID_Inactive, 1, 100, 1, 'DELIVERED', 1, 20000000, '2024-01-05');
 
-INSERT INTO REVIEW (buyerID, productID, rating, comment, date_Posted) VALUES 
-(12, 100, 5, 'Great product!', '2024-01-10');
+INSERT INTO REVIEW (buyerID, orderID, productID, rating, comment, date_Posted) VALUES 
+(12, @orderID_Inactive, 100, 5, 'Great product!', '2024-01-10');
 
 -- TEST QUERY FOR SCENARIO 3:
 SELECT fn_classifyBuyerRank(12); 
@@ -370,8 +370,8 @@ SET @orderID_Valid = LAST_INSERT_ID();
 INSERT INTO ORDER_ITEM (orderID, optionID, productID, carrierID, status, quantity, unit_Price, delivered_date) 
 VALUES (@orderID_Valid, 1, 100, 1, 'DELIVERED', 1, 6000000, NOW());
 
-INSERT INTO REVIEW (buyerID, productID, rating, comment, date_Posted) VALUES 
-(13, 100, 5, 'Great product!', NOW());
+INSERT INTO REVIEW (buyerID, orderID, productID, rating, comment, date_Posted) VALUES 
+(13, @orderID_Valid, 100, 5, 'Great product!', NOW());
 
 -- 4.2 Add Canceled Orders (3 Orders)
 -- Total Orders = 1 (Initial) + 1 (Valid) + 3 (Cancel) = 5.
