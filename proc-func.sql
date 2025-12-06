@@ -307,7 +307,7 @@ INSERT INTO PRODUCT_OPTIONS (productID, optionID, current_Stock) VALUES (101, 1,
 INSERT INTO BELONGS_TO_CATEGORY (productID, categoryID) VALUES (101, 1);
 
 -- TEST QUERY FOR SCENARIO 1:
--- CALL sp_getShopProductStatistics(1, NULL); 
+CALL sp_getShopProductStatistics(1, NULL); 
 -- ^ Should show Laptop (2 sold), Tai nghe (2 sold), and VGA Cable (0 sold).
 
 
