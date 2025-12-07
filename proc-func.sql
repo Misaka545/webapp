@@ -308,7 +308,7 @@ INSERT INTO BELONGS_TO_CATEGORY (productID, categoryID) VALUES (101, 1);
 
 -- TEST QUERY FOR SCENARIO 1:
 CALL sp_getShopProductStatistics(1, NULL); 
--- ^ Should show Laptop (2 sold), Tai nghe (2 sold), and VGA Cable (0 sold).
+-- ^ Should show Laptop (2 sold), Tai nghe (5 sold), and VGA Cable (0 sold).
 
 
 -- ==============================================================
@@ -399,7 +399,7 @@ SELECT fn_calculateShopNetRevenue(1, 12, 2025) AS TechZone_Dec_Revenue;
 -- 2. Check Statistics for Shop 1
 -- Look for 'Old VGA Cable' with 0 Sales.
 CALL sp_getShopProductStatistics(1, NULL);
--- should show 5 laptop sold, 2 tai nghe sold, 0 vga cable sold.
+-- should show 5 laptop sold, 5 tai nghe sold, 0 vga cable sold.
 
 -- 3. Check Buyer Ranks
 SELECT 
@@ -493,19 +493,18 @@ CALL INSERT_PRODUCT(999, 'Sản phẩm test', 'Mô tả', 100000, 1);
 INSERT INTO SHOP (sellerID, shopName, description, shopType, date_Open, shop_Status) 
 VALUES (6, 'Shop Inactive', 'Shop ngừng hoạt động', 'Other','2019-3-4' , 'INACTIVE');
 
-CALL INSERT_PRODUCT(6, 'Sản phẩm test', 'Mô tả', 100000);
+CALL INSERT_PRODUCT(6, 'Sản phẩm test', 'Mô tả', 100000, 1);
  
 -- Test 5: Lỗi - Tên sản phẩm rỗng
-CALL INSERT_PRODUCT(1, '', 'Mô tả', 100000);
+CALL INSERT_PRODUCT(1, '', 'Mô tả', 100000, 1);
  
 
 -- Test 6: Lỗi - Giá sản phẩm < 0
-CALL INSERT_PRODUCT(1, 'Sản phẩm giá âm', 'Mô tả', -50000);
+CALL INSERT_PRODUCT(1, 'Sản phẩm giá âm', 'Mô tả', -50000, 1);
  
 
 -- Test 7: Lỗi - Giá sản phẩm = 0
-CALL INSERT_PRODUCT(1, 'Sản phẩm giá 0', 'Mô tả', 0);
-
+CALL INSERT_PRODUCT(1, 'Sản phẩm giá 0', 'Mô tả', 0, 1);
 --2.1.2 Update
 -- Bảng PRODUCT
 -- Câu lệnh: 
@@ -577,11 +576,11 @@ CALL UPDATE_PRODUCT(1, 'Tai nghe Bluetooth cao cấp', 'Chất lượng âm than
 CALL UPDATE_PRODUCT(999, 'Tên mới', 'Mô tả mới', 200000, 1);
  
 -- Test 10: Lỗi - Tên sản phẩm rỗng
-CALL UPDATE_PRODUCT(6, '', 'Mô tả mới', 200000, 1);
+CALL UPDATE_PRODUCT(1, '', 'Mô tả mới', 200000, 1);
  
 
 -- Test 11: Lỗi - Giá sản phẩm <= 0
-CALL UPDATE_PRODUCT(6, 'Tên mới', 'Mô tả mới', -100000, 1);
+CALL UPDATE_PRODUCT(1, 'Tên mới', 'Mô tả mới', -100000, 1);
 --2.1.3. Delete 
 -- Sản phẩm được xóa khi :
 -- Sản phẩm thông tin không đúng, vi phạm quy định của sàn thương mại điện tử
@@ -637,11 +636,11 @@ BEGIN
 END;
 -- TestCase:
 -- Test 12: Xóa sản phẩm không có đơn hàng (thành công)
-CALL INSERT_PRODUCT(1, 'Sản phẩm test xóa', 'Sản phẩm để test xóa', 100000);
+CALL INSERT_PRODUCT(1, 'Sản phẩm test xóa', 'Sản phẩm để test xóa', 100000, 1);
 CALL DELETE_PRODUCT(107);
 
 -- Test 13: Lỗi - Xóa sản phẩm có đơn hàng
-CALL DELETE_PRODUCT(6);  -- Sản phẩm có trong ORDER_ITEM
+CALL DELETE_PRODUCT(1);  -- Sản phẩm có trong ORDER_ITEM
  
 -- Test 14: Lỗi - Sản phẩm không tồn tại
 CALL DELETE_PRODUCT(999);
@@ -703,6 +702,7 @@ BEGIN
         JOIN ORDERS o ON oi.orderID = o.orderID
         WHERE oi.productID = NEW.productID 
           AND o.buyerID = NEW.buyerID
+        LIMIT 1;
     ELSE
         SET order_status = NULL;
     END IF;
@@ -721,7 +721,7 @@ END;
 -- Test Case:
 -- Test case 1: Thêm đánh giá hợp lệ
 INSERT INTO REVIEW (buyerID, productID, rating, comment) 
-VALUES (11, 6, 5, 'Sản phẩm tuyệt vời!');
+VALUES (11, 1, 5, 'Sản phẩm tuyệt vời!');
 
 -- Test case 2: Sản phẩm không tồn tại
 INSERT INTO REVIEW (buyerID, productID, rating, comment) 
@@ -730,21 +730,21 @@ VALUES (11, 99, 5, 'Sản phẩm tuyệt vời!');
 
 -- Test case 3: Buyer không tồn tại
 INSERT INTO REVIEW (buyerID, productID, rating, comment) 
-VALUES (99, 6, 5, 'Sản phẩm tuyệt vời!');
+VALUES (99, 2, 5, 'Sản phẩm tuyệt vời!');
  
 
 -- Test case 4: Chỉ được đánh giá 1 lần
 INSERT INTO REVIEW (buyerID, productID, rating, comment) 
-VALUES (11, 6, 5, 'Sản phẩm tuyệt vời!');
+VALUES (11, 1, 5, 'Sản phẩm tuyệt vời!');
  
 
 -- Test case 5: Không tìm thấy đơn hàng
 INSERT INTO REVIEW (buyerID, productID, rating, comment) 
-VALUES (11, 15, 5, 'Sản phẩm tuyệt vời!');
+VALUES (11, 3, 5, 'Sản phẩm tuyệt vời!');
 
 -- Test case 6: Chỉ đánh giá khi đã hoàn thành đơn hàng
 INSERT INTO REVIEW (buyerID, productID, rating, comment) 
-VALUES (12, 7, 5, 'Sản phẩm tuyệt vời!');
+VALUES (12, 1, 5, 'Sản phẩm tuyệt vời!');
 
 --2.2.2 Trigger cho thuộc tính dẫn xuất
 -- Thuộc tính: giá trị total_Amount trong ORDERS
@@ -796,8 +796,8 @@ END;
 INSERT INTO ORDERS (buyerID, addressID, total_Amount, order_Date) VALUES
 (15, 5,  0,  '2025-11-15 08:00:00');
  
-INSERT INTO ORDER_ITEM VALUES
-(13, 1, 20, 1, 'PENDING', 1, 100000, '2025-11-20', '2025-11-20', 'PAID');
+INSERT INTO ORDER_ITEM (orderID, optionID, productID, carrierID, status, quantity, unit_Price, delivered_date, expected_delivered_date, statusPaid) VALUES
+(13, 1, 2, 1, 'PENDING', 1, 100000, '2025-11-20', '2025-11-20', 'PAID');
  
 --> Bảng ORDER đã cập nhật giá trị total_amount : 100000
  
